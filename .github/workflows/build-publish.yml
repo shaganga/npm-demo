@@ -4,55 +4,52 @@ on: push
 jobs:
   build:
     runs-on: windows-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        
-      - name: Setup JFrog CLI
-        uses: jfrog/setup-jfrog-cli@v2
-        env:  
-          JF_URL: ${{ secrets.JF_URL }}
-          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
-          
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '14'
-          
-      - name: Install dependencies
-        run: npm install
+    - name: Checkout
+      uses: actions/checkout@v2
 
-      - name: Run tests
-        run: npm test
+    - name: Setup JFrog CLI
+      uses: jfrog/setup-jfrog-cli@v2
+      env:  
+        JF_URL: ${{ secrets.JF_URL }}
+        JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
 
-      - name: Create artifact package
-        run: npm pack
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
 
-      - name: Get package version
-        id: package_version
-        run: echo "::set-output name=version::$(node -p "require('./package.json').version")"
+    - name: Install npm dependencies
+      run: npm install
 
-      - name: Check artifact presence in Artifactory
-        id: check_artifact
-        run: |
-          $artifactExists = jf rt s "demo-npm/frog-utils-${{ steps.set_version.outputs.version }}.tgz" ; if ($LASTEXITCODE -eq 0) { echo "::set-output name=exists::true" } else { echo "::set-output name=exists::false" }
-          echo "::set-output name=exists::$artifactExists"
+    - name: Run Tests
+      run: npm test
 
-      - name: Publish artifact to Artifactory
-        run: |
-          if (${{ steps.check_artifact.outputs.exists }} -eq $false) {
-            jf rt u "./frog-utils-${{ steps.package_version.outputs.version }}.tgz" demo-npm --build-name=$GITHUB_RUN_ID --build-number=$GITHUB_RUN_NUMBER
-            Write-Output "Artifact successfully uploaded to Artifactory."
-          } else {
-            Write-Output "This version of artifact already present, no need to upload."
-          }
-        shell: pwsh
+    - name: Build package
+      run: npm pack
 
-      - name: Publish Build info With JFrog CLI
-        run: |
-          # Collect environment variables for the build
-          jf rt build-collect-env
-          # Collect VCS details from git and add them to the build
-          jf rt build-add-git
-          # Publish build info
-          jf rt build-publish
+    - name: Get version
+      id: get_version
+      run: echo "::set-output name=VERSION::$(node -p "require('./package.json').version")"
+      shell: bash
+
+    - name: Check if artifact already exists in Artifactory
+      run: |
+        $artifactExists = (jf rt s "demo-npm/frog-utils-${{ steps.get_version.outputs.VERSION }}.tgz" || echo $false)
+        if ($artifactExists -eq $null) {
+          echo "Artifact does not exist in Artifactory."
+          echo "exists=false" >> $GITHUB_ENV
+        } else {
+          echo "Artifact exists in Artifactory."
+          echo "exists=true" >> $GITHUB_ENV
+        }
+      shell: pwsh
+
+    - name: Publish Artifact
+      run: |
+        if ($env:exists -eq "false") {
+          jf rt u "./frog-utils-${{ steps.get_version.outputs.VERSION }}.tgz" demo-npm --build-name=$GITHUB_RUN_ID --build-number=$GITHUB_RUN_NUMBER
+          Write-Output "Artifact successfully uploaded to Artifactory."
+        } else {
+          Write-Output "This version of artifact already present, no need to upload."
+        }
+      shell: pwsh
