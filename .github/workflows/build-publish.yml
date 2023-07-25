@@ -35,7 +35,7 @@ jobs:
       - name: Check artifact presence in Artifactory
         id: check_artifact
         run: |
-          $artifactExists = (jf rt s "demo-npm/frog-utils-${{ steps.package_version.outputs.version }}.tgz" | Out-String) -match 'Found [1-9]\d* artifact'
+          $artifactExists = jf rt s "demo-npm/frog-utils-${{ steps.set_version.outputs.version }}.tgz" ; if ($LASTEXITCODE -eq 0) { echo "::set-output name=exists::true" } else { echo "::set-output name=exists::false" }
           echo "::set-output name=exists::$artifactExists"
 
       - name: Publish artifact to Artifactory
