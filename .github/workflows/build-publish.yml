@@ -3,51 +3,53 @@ on: push
 
 jobs:
   build:
-     runs-on: windows-latest
-       
-     steps:
-       - name: Checkout
-         uses: actions/checkout@v2
-         
-       - name: Setup JFrog CLI
-         uses: jfrog/setup-jfrog-cli@v2
-         env:  
-           JF_URL: ${{ secrets.JF_URL }}
-           JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v2
+        env:  
+          JF_URL: ${{ secrets.JF_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
 
-       - name: Setup Node
-         uses: actions/setup-node@v2
-         with:
-           node-version: '14'
-           
-       - name: Install Dependencies
-         run: npm install
-         
-       - name: Run tests
-         run: npm test
+      - name: Setup Node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+          
+      - name: Install Dependencies
+        run: npm install
+        
+      - name: Run tests
+        run: npm test
 
-       - name: Pack
-         run: npm pack
-         
-       - name: Get version
-         id: packagejson
-         run: |
-           echo "::set-output name=version::$(node -p "require('./package.json').version")"
+      - name: Pack
+        run: npm pack
+        
+      - name: Get version
+        id: packagejson
+        run: |
+          echo "::set-output name=version::$(node -p "require('./package.json').version")"
 
-       - name: Check if artifact exists in Artifactory
-         id: check_artifact
-         run: |
-           if jf rt s "demo-npm/frog-utils-${{ steps.packagejson.outputs.version }}.tgz"; then
-             echo "::set-output name=exists::true"
-           else
-             echo "::set-output name=exists::false"
-           fi
+      - name: Check if artifact exists in Artifactory
+        id: check_artifact
+        shell: pwsh
+        run: |
+          $artifactExists = jf rt s "demo-npm/frog-utils-${{ steps.packagejson.outputs.version }}.tgz"
+          if ($artifactExists) {
+            echo "exists=true" | Out-File -FilePath $env:GITHUB_ENV -Append
+          } else {
+            echo "exists=false" | Out-File -FilePath $env:GITHUB_ENV -Append
+          }
 
-       - name: Upload to Artifactory
-         run: |
-           if [ "${{ steps.check_artifact.outputs.exists }}" = "false" ]; then
-             jf rt u "./frog-utils-${{ steps.packagejson.outputs.version }}.tgz" demo-npm --build-name=$GITHUB_RUN_ID --build-number=$GITHUB_RUN_NUMBER
-             echo "Artifact successfully uploaded to Artifactory."
-           else
-             echo "This version of artifact already present, no need to upload."
-           fi
+      - name: Upload to Artifactory
+        shell: pwsh
+        run: |
+          if ($env:exists -eq "false") {
+            jf rt u "./frog-utils-${{ steps.packagejson.outputs.version }}.tgz" demo-npm --build-name=$GITHUB_RUN_ID --build-number=$GITHUB_RUN_NUMBER
+            Write-Output "Artifact successfully uploaded to Artifactory."
+          } else {
+            Write-Output "This version of artifact already present, no need to upload."
+          }
