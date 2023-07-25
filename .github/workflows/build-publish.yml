@@ -33,7 +33,21 @@ jobs:
          id: packagejson
          run: |
            echo "::set-output name=version::$(node -p "require('./package.json').version")"
-         
+
+       - name: Check if artifact exists in Artifactory
+         id: check_artifact
+         run: |
+           if jf rt s "demo-npm/frog-utils-${{ steps.packagejson.outputs.version }}.tgz"; then
+             echo "::set-output name=exists::true"
+           else
+             echo "::set-output name=exists::false"
+           fi
+
        - name: Upload to Artifactory
          run: |
-           jf rt u "./frog-utils-${{ steps.packagejson.outputs.version }}.tgz" demo-npm --build-name=$GITHUB_RUN_ID --build-number=$GITHUB_RUN_NUMBER
+           if [ "${{ steps.check_artifact.outputs.exists }}" = "false" ]; then
+             jf rt u "./frog-utils-${{ steps.packagejson.outputs.version }}.tgz" demo-npm --build-name=$GITHUB_RUN_ID --build-number=$GITHUB_RUN_NUMBER
+             echo "Artifact successfully uploaded to Artifactory."
+           else
+             echo "This version of artifact already present, no need to upload."
+           fi
