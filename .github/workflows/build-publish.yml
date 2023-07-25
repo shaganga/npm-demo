@@ -36,12 +36,12 @@ jobs:
         shell: pwsh
         run: |
           $artifactExists = jf rt s "demo-npm/frog-utils-${{ steps.packagejson.outputs.version }}.tgz" || true
-          if ($artifactExists -like "*Found 1 artifact*") {
-            echo "Artifact exists in Artifactory."
-            echo "::set-output name=exists::true"
-          } else {
+          if ($artifactExists -like "*Found 0 artifacts*") {
             echo "Artifact does not exist in Artifactory."
             echo "::set-output name=exists::false"
+          } else {
+            echo "Artifact exists in Artifactory."
+            echo "::set-output name=exists::true"
           }
           
       - name: Publish
