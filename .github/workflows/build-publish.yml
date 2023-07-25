@@ -2,8 +2,10 @@ name: "JFrog Integration Example"
 on: push
 
 jobs:
-  build:
+  check:
     runs-on: windows-latest
+    outputs:
+      exists: ${{ steps.check_artifact.outputs.exists }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -39,15 +41,35 @@ jobs:
         run: |
           $artifactExists = jf rt s "demo-npm/frog-utils-${{ steps.packagejson.outputs.version }}.tgz" || true
           if ($artifactExists -like "*Found 0 artifact*") {
-            echo "exists=false" | Out-File -FilePath $env:GITHUB_ENV -Append
+            echo "exists=false" >> $GITHUB_ENV
+            echo "::set-output name=exists::false"
           } else {
-            echo "exists=true" | Out-File -FilePath $env:GITHUB_ENV -Append
+            echo "exists=true" >> $GITHUB_ENV
+            echo "::set-output name=exists::true"
           }
 
+  upload:
+    needs: check
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v2
+        env:  
+          JF_URL: ${{ secrets.JF_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+
+      - name: Get version
+        id: packagejson
+        run: |
+          echo "::set-output name=version::$(node -p "require('./package.json').version")"
+          
       - name: Upload to Artifactory
         shell: pwsh
         run: |
-          if ($env:exists -eq "false") {
+          if (${{ needs.check.outputs.exists }} -eq "false") {
             jf rt u "./frog-utils-${{ steps.packagejson.outputs.version }}.tgz" demo-npm --build-name=$GITHUB_RUN_ID --build-number=$GITHUB_RUN_NUMBER
             Write-Output "Artifact successfully uploaded to Artifactory."
           } else {
