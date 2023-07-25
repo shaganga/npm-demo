@@ -38,10 +38,10 @@ jobs:
         shell: pwsh
         run: |
           $artifactExists = jf rt s "demo-npm/frog-utils-${{ steps.packagejson.outputs.version }}.tgz"
-          if ($artifactExists) {
-            echo "exists=true" | Out-File -FilePath $env:GITHUB_ENV -Append
-          } else {
+          if ($artifactExists -like "*Found 0 artifact*") {
             echo "exists=false" | Out-File -FilePath $env:GITHUB_ENV -Append
+          } else {
+            echo "exists=true" | Out-File -FilePath $env:GITHUB_ENV -Append
           }
 
       - name: Upload to Artifactory
