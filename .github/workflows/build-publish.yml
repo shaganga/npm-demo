@@ -14,29 +14,18 @@ jobs:
          env:  
            JF_URL: ${{ secrets.JF_URL }}
            JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
-           
-       - name: Setup Python
-         uses: actions/setup-python@v2
+
+       - name: Setup Node
+         uses: actions/setup-node@v2
          with:
-           python-version: '3.x'
+           node-version: '14'
            
-       - name: Set CLI Config for Resolution
-         run: jf pip-config --global=true --repo-resolve=demo-python
+       - name: Install Dependencies
+         run: npm install
            
-       - name: Install Deps
-         run: jf pip install .
-           
-       - name: Run tests
-         run: python -m unittest discover
-         
-       - name: Publish to Artifactory
-         run: jf rt u "./dist/*.tar.gz" demo-python --build-name=$GITHUB_RUN_ID --build-number=$GITHUB_RUN_NUMBER
-         
-       - name: Publish Build info With JFrog CLI
+       - name: Build Project
+         run: npm run build # Replace this with your actual build command if different
+
+       - name: Upload to Artifactory
          run: |
-          # Collect environment variables for the build
-          jf rt build-collect-env
-          # Collect VCS details from git and add them to the build
-          jf rt build-add-git
-          # Publish build info
-          jf rt build-publish
+           jf rt u "./dist/*" demo-artifactory --build-name=$GITHUB_RUN_ID --build-number=$GITHUB_RUN_NUMBER
