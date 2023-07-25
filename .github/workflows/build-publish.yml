@@ -3,34 +3,32 @@ on: push
 
 jobs:
   build:
-     runs-on: windows-latest
+     runs-on: ubuntu-latest
        
      steps:
        - name: Checkout
-         uses: actions/checkout@v2
+         uses: actions/checkout@v3
          
        - name: Setup JFrog CLI
-         uses: jfrog/setup-jfrog-cli@v2
+         uses: jfrog/setup-jfrog-cli@v3
          env:  
            JF_URL: ${{ secrets.JF_URL }}
            JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
            
-       - name: Setup Python
-         uses: actions/setup-python@v2
-         with:
-           python-version: '3.x'
+       - name: Setup Node npm
+         uses: actions/setup-node@v3
            
        - name: Set CLI Config
-         run: jf pip-config --global=true --repo-resolve=demo-python --repo-deploy=demo-python
+         run: jf npm-config --global=true --repo-resolve=demo-npm --repo-deploy=demo-npm
            
        - name: Install Deps
-         run: jf pip install .
+         run: jf npm install
            
        - name: Run tests
-         run: python -m unittest discover
+         run: npm test
          
        - name: Publish
-         run: jf pip publish
+         run: jf npm publish
          
        - name: Publish Build info With JFrog CLI
          run: |
