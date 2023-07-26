@@ -1,5 +1,4 @@
 name: "JFrog Integration Example"
-
 on: push
 
 jobs:
@@ -31,12 +30,13 @@ jobs:
     - name: Get version
       id: get_version
       run: echo "::set-output name=VERSION::$(node -p "require('./package.json').version")"
-      shell: bash
+      shell: pwsh
 
     - name: Check if artifact already exists in Artifactory
       run: |
-        $artifactExists = jf rt s "demo-npm/frog-utils-${{ steps.get_version.outputs.VERSION }}.tgz"
-        if ($artifactExists -match "Found 0 artifacts") {
+        $output = jf rt s "demo-npm/frog-utils-${{ steps.get_version.outputs.VERSION }}.tgz"
+        Write-Output $output
+        if ($output -like "*Found 0 artifacts*") {
           echo "Artifact does not exist in Artifactory."
           echo "exists=false" >> $GITHUB_ENV
         } else {
