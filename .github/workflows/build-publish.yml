@@ -37,7 +37,7 @@ jobs:
       run: |
         $output = jf rt s "demo-npm/frog-utils-${{ steps.get_version.outputs.VERSION }}.tgz"
         echo "Output of the search command: $output"
-        if ($output -like '*Found 0 artifacts*') {
+        if (!($output | Select-String -Pattern 'Found 0 artifacts')) {
           echo "Artifact does not exist in Artifactory."
           echo "exists=false" >> $GITHUB_ENV
           echo "::set-output name=exists::false"
