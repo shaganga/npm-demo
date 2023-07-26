@@ -42,7 +42,7 @@ jobs:
           echo "exists=false" >> $GITHUB_ENV
           echo "::set-output name=exists::false"
         } else {
-          echo "Artifact exists in Artifactory."
+          echo "Given Artifact exists in Artifactory."
           echo "exists=true" >> $GITHUB_ENV
           echo "::set-output name=exists::true"
         }
