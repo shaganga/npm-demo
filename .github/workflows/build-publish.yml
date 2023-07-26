@@ -33,17 +33,20 @@ jobs:
       shell: bash
 
     - name: Check if artifact already exists in Artifactory
+      id: check_artifact
       run: |
         $output = jf rt s "demo-npm/frog-utils-${{ steps.get_version.outputs.VERSION }}.tgz"
-        echo "Output of the search command: $output"
-        if ($output -like '*Found 0 artifacts*') {
-          echo "Artifact does not exist in Artifactory."
+        Write-Output "Output of the search command: $output"
+        $stringOutput = $output.ToString()
+        if ($stringOutput -eq '[]') {
+          Write-Output "Artifact does not exist in Artifactory."
           echo "exists=false" | Out-File -FilePath $env:GITHUB_ENV -Append
         } else {
-          echo "Artifact exists in Artifactory."
+          Write-Output "Artifact exists in Artifactory."
           echo "exists=true" | Out-File -FilePath $env:GITHUB_ENV -Append
         }
       shell: pwsh
+
 
     - name: Publish Artifact
       run: |
