@@ -1,6 +1,6 @@
 {
   "name": "frog-utils",
-  "version": "6.0.0",
+  "version": "7.0.0",
   "description": "Add a frog emoji to a given string and do some more frog stuff related 🐸",
   "main": "index.js",
   "scripts": {
