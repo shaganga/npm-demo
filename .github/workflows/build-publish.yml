@@ -1,55 +1,49 @@
-name: "JFrog Integration Example"
-on: push
+name: Upload to Artifactory
+
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
+    - name: Checkout code
       uses: actions/checkout@v2
 
     - name: Setup JFrog CLI
-      uses: jfrog/setup-jfrog-cli@v2
-      env:  
-        JF_URL: ${{ secrets.JF_URL }}
-        JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+      uses: jfrog/setup-jfrog-cli@v1
 
     - name: Setup Node.js
       uses: actions/setup-node@v2
+      with:
+        node-version: 14
 
-    - name: Install npm dependencies
-      run: npm install
+    - name: Install dependencies
+      run: npm ci
 
-    - name: Run Tests
+    - name: Run tests
       run: npm test
 
-    - name: Build package
+    - name: Pack for npm
       run: npm pack
+      - run: echo "::set-output name=version::$(node -p "require('./package.json').version")"
+        id: package
 
-    - name: Get version
-      id: get_version
-      run: echo "::set-output name=VERSION::$(node -p "require('./package.json').version")"
-      shell: bash
-
-    - name: Check if artifact already exists in Artifactory
+    - name: Check artifact
+      id: check_artifact
       run: |
-        $artifactExists = (jf rt s "demo-npm/frog-utils-${{ steps.get_version.outputs.VERSION }}.tgz" || echo $false)
-        if ($artifactExists -eq $null) {
-          echo "Artifact does not exist in Artifactory."
-          echo "exists=false" >> $GITHUB_ENV
-        } else {
-          echo "Artifact exists in Artifactory."
-          echo "exists=true" >> $GITHUB_ENV
-        }
-      shell: pwsh
+        artifactExists=$(jfrog rt s "demo-npm/frog-utils-${{ steps.package.outputs.version }}.tgz" || echo false)
+        echo "ARTIFACT_EXISTS=$artifactExists" >> $GITHUB_ENV
+        echo "Artifact exists: $artifactExists"
 
-    - name: Publish Artifact
+    - name: Upload to Artifactory if not exists
       run: |
-        if ($env:exists -eq "false") {
-          jf rt u "./frog-utils-${{ steps.get_version.outputs.VERSION }}.tgz" demo-npm --build-name=$GITHUB_RUN_ID --build-number=$GITHUB_RUN_NUMBER
-          Write-Output "Artifact successfully uploaded to Artifactory."
-        } else {
-          Write-Output "This version of artifact already present, no need to upload."
-        }
-      shell: pwsh
+        if [ "${{ env.ARTIFACT_EXISTS }}" = "false" ]; then
+          jfrog rt u "./frog-utils-${{ steps.package.outputs.version }}.tgz" demo-npm --build-name=$GITHUB_RUN_ID --build-number=$GITHUB_RUN_NUMBER
+          echo "Artifact successfully uploaded to Artifactory."
+        else
+          echo "This version of artifact already present, no need to upload."
+        fi
