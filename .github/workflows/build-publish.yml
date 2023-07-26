@@ -51,7 +51,7 @@ jobs:
     - name: Publish Artifact
       run: |
         echo "Exists value: ${{ steps.check_artifact.outputs.exists }}"
-        if (${{ steps.check_artifact.outputs.exists }} -eq "false") {
+        if ("${{ steps.check_artifact.outputs.exists }}" -eq "false") {
           jf rt u "./frog-utils-${{ steps.get_version.outputs.VERSION }}.tgz" demo-npm --build-name=$GITHUB_RUN_ID --build-number=$GITHUB_RUN_NUMBER
           Write-Output "Artifact successfully uploaded to Artifactory."
         } else {
