@@ -34,20 +34,20 @@ jobs:
 
     - name: Check if artifact already exists in Artifactory
       run: |
-        echo "exists=false" >> $GITHUB_ENV
         $output = jf rt s "demo-npm/frog-utils-${{ steps.get_version.outputs.VERSION }}.tgz"
-        Write-Output "Output of the search command: $output"
-        if ($output -notlike '*Found 0 artifacts*') {
-          Write-Output "Artifact exists in Artifactory."
-          echo "exists=true" >> $GITHUB_ENV
+        echo "Output of the search command: $output"
+        if ($output -like '*Found 0 artifacts*') {
+          echo "Artifact does not exist in Artifactory."
+          echo "exists=false" | Out-File -FilePath $env:GITHUB_ENV -Append
         } else {
-          Write-Output "Artifact does not exist in Artifactory."
+          echo "Artifact exists in Artifactory."
+          echo "exists=true" | Out-File -FilePath $env:GITHUB_ENV -Append
         }
       shell: pwsh
 
     - name: Publish Artifact
       run: |
-        Write-Output "Exists value: $env:exists"
+        echo "Exists value: $env:exists"
         if ($env:exists -eq "false") {
           jf rt u "./frog-utils-${{ steps.get_version.outputs.VERSION }}.tgz" demo-npm --build-name=$GITHUB_RUN_ID --build-number=$GITHUB_RUN_NUMBER
           Write-Output "Artifact successfully uploaded to Artifactory."
