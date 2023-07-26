@@ -1,28 +1,57 @@
-{
-  "name": "frog-utils",
-  "version": "6.0.0",
-  "description": "Add a frog emoji to a given string and do some more frog stuff related 🐸",
-  "main": "index.js",
-  "scripts": {
-    "test": "cd tests && jest"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/yonarbel/create-package-example.git"
-  },
-  "keywords": [
-    "JFrog"
-  ],
-  "author": "Yonatan Arbel",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/yonarbel/create-package-example/issues"
-  },
-  "homepage": "https://github.com/yonarbel/create-package-example#readme",
-  "dependencies": {
-    "lodash": "^4.17.21"
-  },
-  "devDependencies": {
-    "jest": "^29.3.1"
-  }
-}
+name: "JFrog Integration Example"
+on: push
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Setup JFrog CLI
+      uses: jfrog/setup-jfrog-cli@v2
+      env:  
+        JF_URL: ${{ secrets.JF_URL }}
+        JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v2
+
+    - name: Install npm dependencies
+      run: npm install
+
+    - name: Run Tests
+      run: npm test
+
+    - name: Build package
+      run: npm pack
+
+    - name: Get version
+      id: get_version
+      run: echo "::set-output name=VERSION::$(node -p "require('./package.json').version")"
+      shell: bash
+
+    - name: Check if artifact already exists in Artifactory
+      run: |
+        $output = jf rt s "demo-npm/frog-utils-${{ steps.get_version.outputs.VERSION }}.tgz"
+        Write-Output "Output of the search command: $output"
+        if ($output -like '*Found 0 artifacts*') {
+          Write-Output "Artifact does not exist in Artifactory."
+          echo "exists=false" >> $GITHUB_ENV
+        } else {
+          Write-Output "Artifact exists in Artifactory."
+          echo "exists=true" >> $GITHUB_ENV
+        }
+      shell: pwsh
+
+    - name: Publish Artifact
+      run: |
+        Write-Output "Exists value: $env:exists"
+        if ($env:exists -eq "false") {
+          jf rt u "./frog-utils-${{ steps.get_version.outputs.VERSION }}.tgz" demo-npm --build-name=$GITHUB_RUN_ID --build-number=$GITHUB_RUN_NUMBER
+          Write-Output "Artifact successfully uploaded to Artifactory."
+        } else {
+          Write-Output "This version of artifact already present, no need to upload."
+        }
+      shell: pwsh
