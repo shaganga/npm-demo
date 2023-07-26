@@ -33,10 +33,9 @@ jobs:
       shell: bash
 
     - name: Check if artifact already exists in Artifactory
-      id: check_artifact
       run: |
         $artifactExists = jf rt s "demo-npm/frog-utils-${{ steps.get_version.outputs.VERSION }}.tgz"
-        if (!$artifactExists) {
+        if ($artifactExists -match "Found 0 artifacts") {
           echo "Artifact does not exist in Artifactory."
           echo "exists=false" >> $GITHUB_ENV
         } else {
@@ -47,7 +46,7 @@ jobs:
 
     - name: Publish Artifact
       run: |
-        if ($env:exists -eq "false") {
+        if ($env:exists -match "false") {
           jf rt u "./frog-utils-${{ steps.get_version.outputs.VERSION }}.tgz" demo-npm --build-name=$GITHUB_RUN_ID --build-number=$GITHUB_RUN_NUMBER
           Write-Output "Artifact successfully uploaded to Artifactory."
         } else {
