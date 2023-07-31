@@ -1,0 +1,14 @@
+inputSet:
+  name: Build_npm_demo_1690801309597-push-trigger-input-set
+  identifier: Build_npm_demo_1690801309597pushtriggerinputset
+  orgIdentifier: default
+  projectIdentifier: default_project
+  pipeline:
+    identifier: Build_npm_demo_1690801309597
+    properties:
+      ci:
+        codebase:
+          build:
+            type: branch
+            spec:
+              branch: <+trigger.branch>
